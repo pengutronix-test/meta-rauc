@@ -1,20 +1,21 @@
 name: meta-rauc CI
 
 on:
-  # Trigger the workflow on push or pull request,
-  # but only for the master branch
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+  push: {}
+  pull_request: {}
+  workflow_dispatch: {}
+
+
 jobs:
   build:
     name: meta-rauc Build
-    runs-on: ubuntu-20.04
+    runs-on: ${{ vars.BUILD_RUNS_ON || (github.repository == 'rauc/meta-rauc' && 'ptx-runner') || 'ubuntu-latest' }}
     timeout-minutes: 720
     steps:
+      - name: Setup SSH Key for Yocto Cache
+        run: |
+          echo "${{ secrets.YOCTO_CACHE_KEY }}" >> ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
       - name: Install required packages
         run: |
           sudo apt-get install diffstat
@@ -32,7 +33,7 @@ jobs:
           bitbake-layers add-layer ../meta-rauc
           echo 'INHERIT += "rm_work"' >> conf/local.conf
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
-          echo 'SSTATE_MIRRORS = "file://.* http://195.201.147.117/sstate-cache/PATH"' >> conf/local.conf
+          echo 'SSTATE_MIRRORS = "file://.* file:///srv/sstate/sstate/PATH"' >> conf/local.conf
       - name: Build rauc, rauc-native
         run: |
           source poky/oe-init-build-env build
@@ -58,3 +59,9 @@ jobs:
           source poky/oe-init-build-env build
           bitbake-layers add-layer ../meta-openembedded/meta-python
           bitbake rauc-hawkbit
+      - name: Cache Data
+        if: ${{ always() }}
+        run: |
+          test ! -s ~/.ssh/id_ed25519 || rsync -avxP build/downloads yocto-cache: || true
+          test ! -s ~/.ssh/id_ed25519 || rsync -avxP build/sstate-cache yocto-cache: || true
+
