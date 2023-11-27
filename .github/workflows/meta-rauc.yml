@@ -62,6 +62,6 @@ jobs:
       - name: Cache Data
         if: ${{ always() }}
         run: |
-          test ! -s ~/.ssh/id_ed25519 || rsync -avx build/downloads yocto-cache: || true
-          test ! -s ~/.ssh/id_ed25519 || rsync -avx build/sstate-cache yocto-cache: || true
+          test ! -s ~/.ssh/id_ed25519 || rsync -avx --ignore-existing build/downloads yocto-cache: || true
+          test ! -s ~/.ssh/id_ed25519 || rsync -avx --ignore-existing build/sstate-cache yocto-cache: || true
 
