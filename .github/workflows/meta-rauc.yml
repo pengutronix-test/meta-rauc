@@ -24,7 +24,7 @@ jobs:
         with:
           path: meta-rauc
       - name: Clone poky
-        run: git clone -b master git://git.yoctoproject.org/poky
+        run: git clone -b master https://github.com/yoctoproject/poky.git
       - name: Clone meta-openembedded
         run: git clone -b master https://github.com/openembedded/meta-openembedded.git
       - name: Initialize build directory
