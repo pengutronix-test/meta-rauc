@@ -33,7 +33,11 @@ jobs:
           bitbake-layers add-layer ../meta-rauc
           echo 'INHERIT += "rm_work"' >> conf/local.conf
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
-          echo 'SSTATE_MIRRORS = "file://.* file:///srv/sstate/sstate/PATH"' >> conf/local.conf
+          echo 'SSTATE_MIRRORS = "file://.* file:///srv/sstate/cache/sstate-cache/PATH"' >> conf/local.conf
+          echo 'PREMIRRORS:prepend = "git://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
+          echo 'PREMIRRORS:prepend = "ftp://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
+          echo 'PREMIRRORS:prepend = "http://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
+          echo 'PREMIRRORS:prepend = "https://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
       - name: Build rauc, rauc-native
         run: |
           source poky/oe-init-build-env build
@@ -62,6 +66,6 @@ jobs:
       - name: Cache Data
         if: ${{ always() }}
         run: |
-          test ! -s ~/.ssh/id_ed25519 || rsync -avxP build/downloads yocto-cache: || true
-          test ! -s ~/.ssh/id_ed25519 || rsync -avxP build/sstate-cache yocto-cache: || true
+          test ! -s ~/.ssh/id_ed25519 || rsync -avx build/downloads yocto-cache: || true
+          test ! -s ~/.ssh/id_ed25519 || rsync -avx build/sstate-cache yocto-cache: || true
 
