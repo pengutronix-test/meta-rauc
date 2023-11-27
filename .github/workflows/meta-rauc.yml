@@ -31,13 +31,9 @@ jobs:
         run: |
           source poky/oe-init-build-env build
           bitbake-layers add-layer ../meta-rauc
+          cp ~/.yocto/auto.conf conf/ || true
           echo 'INHERIT += "rm_work"' >> conf/local.conf
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
-          echo 'SSTATE_MIRRORS = "file://.* file:///srv/sstate/cache/sstate-cache/PATH"' >> conf/local.conf
-          echo 'PREMIRRORS:prepend = "git://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
-          echo 'PREMIRRORS:prepend = "ftp://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
-          echo 'PREMIRRORS:prepend = "http://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
-          echo 'PREMIRRORS:prepend = "https://.*/.* file:///srv/sstate/cache/downloads/"' >> conf/local.conf
       - name: Build rauc, rauc-native
         run: |
           source poky/oe-init-build-env build
