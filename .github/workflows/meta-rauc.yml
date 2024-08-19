@@ -16,19 +16,6 @@ jobs:
         run: |
           echo "${{ secrets.YOCTO_CACHE_KEY }}" >> ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          sudo mkdir -p /srv/cache /srv/shared-git
-          sudo mount -t 9p cache /srv/cache || true
-          sudo mount -t 9p shared-git /srv/shared-git || true
-          df -h
-          mkdir -p ~/.yocto
-          echo 'SSTATE_MIRRORS = "file://.* file:///srv/cache/sstate-cache/PATH"' >> ~/.yocto/auto.conf
-          echo 'INHERIT += "own-mirrors"' >> ~/.yocto/auto.conf
-          echo 'SOURCE_MIRROR_URL = "http://10.0.2.2/downloads"' >> ~/.yocto/auto.conf
-          echo 'INHERIT += "rm_work"' >> ~/.yocto/auto.conf
-          # FIXME add OPKGBUILDCMD = 'opkg-build -Z gzip -a "-1n"'
-      - name: Install required packages
-        run: |
-          sudo apt-get install diffstat
       - name: Checkout
         uses: actions/checkout@v2
         with:
@@ -42,7 +29,6 @@ jobs:
           source poky/oe-init-build-env build
           bitbake-layers add-layer ../meta-rauc
           cp ~/.yocto/auto.conf conf/ || true
-          echo 'INHERIT += "rm_work"' >> conf/local.conf
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
       - name: Build rauc, rauc-native
         run: |
