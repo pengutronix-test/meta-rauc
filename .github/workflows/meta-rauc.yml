@@ -30,6 +30,7 @@ jobs:
           bitbake-layers add-layer ../meta-rauc
           cp ~/.yocto/auto.conf conf/ || true
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
+          echo 'BB_GENERATE_MIRROR_TARBALLS = "1"' >> conf/local.conf
       - name: Build rauc, rauc-native
         run: |
           source poky/oe-init-build-env build
