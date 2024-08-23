@@ -8,11 +8,19 @@ on:
 jobs:
   build:
     name: meta-rauc Build
-    # running without sstate would take too long, so only run on the main repo or if BUILD_RUNS_ON is set
-    if: ${{ vars.BUILD_RUNS_ON || github.repository == 'pengutronix-test/meta-rauc' }}
-    runs-on: ${{ fromJSON(vars.BUILD_RUNS_ON || (github.repository == 'pengutronix-test/meta-rauc' && '["self-hosted", "forrest", "build"]'))}}
-    timeout-minutes: 720
+    #runs-on: ${{ fromJSON(vars.BUILD_RUNS_ON || (github.repository == 'pengutronix-test/meta-rauc' && '["self-hosted", "forrest", "build"]') || 'ubuntu-22.04') }}
+    runs-on: >-
+      ${{
+        (vars.BUILD_RUNS_ON != ''  && fromJSON(vars.BUILD_RUNS_ON)) ||
+        (github.repository == 'pengutronix-test/meta-rauc' && fromJSON('["self-hosted", "forrest", "build"]')) ||
+        'ubuntu-20.04'
+      }}
+    # abort if it seems that we're rebuilding too much
+    timeout-minutes: 120
     steps:
+      - name: Install required packages
+        run: |
+          sudo apt-get -q -y --no-install-recommends install diffstat
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -25,41 +33,47 @@ jobs:
         run: |
           source poky/oe-init-build-env build
           bitbake-layers add-layer ../meta-rauc
-          cp ~/.yocto/auto.conf conf/ || true
+          if [ -f ~/.yocto/auto.conf ]; then
+            cp ~/.yocto/auto.conf conf/
+          else
+            echo 'SSTATE_MIRRORS = "file://.* https://github-runner.pengutronix.de/sstate-cache/PATH"' >> conf/auto.conf
+            echo 'BB_SIGNATURE_HANDLER = "OEBasicHash"' >> conf/auto.conf
+            echo 'BB_HASHSERVE = ""' >> conf/auto.conf
+            echo 'OPKGBUILDCMD = "opkg-build -Z gzip -a -1n"' >> conf/auto.conf
+          fi
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
-          echo 'BB_GENERATE_MIRROR_TARBALLS = "1"' >> conf/local.conf
-      #- name: Build rauc, rauc-native
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake rauc rauc-native
-      #- name: Build rauc-hawkbit-updater
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake rauc-hawkbit-updater
+      - name: Build rauc, rauc-native
+        run: |
+          source poky/oe-init-build-env build
+          bitbake rauc rauc-native
+      - name: Build rauc-hawkbit-updater
+        run: |
+          source poky/oe-init-build-env build
+          bitbake rauc-hawkbit-updater
       - name: Build dt-utils
         run: |
           source poky/oe-init-build-env build
           bitbake dt-utils
-      #- name: Build casync, casync-native
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake-layers add-layer ../meta-openembedded/meta-oe
-      #    bitbake-layers add-layer ../meta-openembedded/meta-python
-      #    bitbake-layers add-layer ../meta-openembedded/meta-networking
-      #    bitbake-layers add-layer ../meta-openembedded/meta-filesystems
-      #    bitbake casync casync-native
-      #- name: Build rauc-hawkbit
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake-layers add-layer ../meta-openembedded/meta-python
-      #    bitbake rauc-hawkbit
+      - name: Build casync, casync-native
+        run: |
+          source poky/oe-init-build-env build
+          bitbake-layers add-layer ../meta-openembedded/meta-oe
+          bitbake-layers add-layer ../meta-openembedded/meta-python
+          bitbake-layers add-layer ../meta-openembedded/meta-networking
+          bitbake-layers add-layer ../meta-openembedded/meta-filesystems
+          bitbake casync casync-native
+      - name: Build rauc-hawkbit
+        run: |
+          source poky/oe-init-build-env build
+          bitbake-layers add-layer ../meta-openembedded/meta-python
+          bitbake rauc-hawkbit
       - name: Cache Data
         env:
           CACHE_KEY: ${{ secrets.YOCTO_CACHE_KEY }}
-        if: ${{ always() && env.CACHE_KEY }}
+        if: ${{ env.CACHE_KEY }}
         run: |
+          mkdir ~/.ssh
           echo "$CACHE_KEY" >> ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           rsync -rvx --ignore-existing build/downloads yocto-cache: || true
           rsync -rvx --ignore-existing build/sstate-cache yocto-cache: || true
-
