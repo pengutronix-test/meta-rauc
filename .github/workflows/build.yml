@@ -33,12 +33,15 @@ jobs:
         run: |
           source poky/oe-init-build-env build
           bitbake-layers add-layer ../meta-rauc
-          cp ~/.yocto/auto.conf conf/ || true
-          echo 'BB_SIGNATURE_HANDLER = "OEBasicHash"' >> conf/local.conf
-          echo 'BB_HASHSERVE = ""' >> conf/local.conf
-          echo 'OPKGBUILDCMD = "opkg-build -Z gzip -a -1n"' >> conf/local.conf
+          if [ -f ~/.yocto/auto.conf ]; then
+            cp ~/.yocto/auto.conf conf/
+          else
+            echo 'SSTATE_MIRRORS = "file://.* https://github-runner.pengutronix.de/sstate-cache/PATH"' >> conf/auto.conf
+            echo 'BB_SIGNATURE_HANDLER = "OEBasicHash"' >> conf/auto.conf
+            echo 'BB_HASHSERVE = ""' >> conf/auto.conf
+            echo 'OPKGBUILDCMD = "opkg-build -Z gzip -a -1n"' >> conf/auto.conf
+          fi
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
-          echo 'SSTATE_MIRRORS = "file://.* https://github-runner.pengutronix.de/sstate-cache/PATH"' >> conf/local.conf
       #- name: Build rauc, rauc-native
       #  run: |
       #    source poky/oe-init-build-env build
