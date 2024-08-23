@@ -42,31 +42,31 @@ jobs:
             echo 'OPKGBUILDCMD = "opkg-build -Z gzip -a -1n"' >> conf/auto.conf
           fi
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
-      #- name: Build rauc, rauc-native
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake rauc rauc-native
-      #- name: Build rauc-hawkbit-updater
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake rauc-hawkbit-updater
+      - name: Build rauc, rauc-native
+        run: |
+          source poky/oe-init-build-env build
+          bitbake rauc rauc-native
+      - name: Build rauc-hawkbit-updater
+        run: |
+          source poky/oe-init-build-env build
+          bitbake rauc-hawkbit-updater
       - name: Build dt-utils
         run: |
           source poky/oe-init-build-env build
           bitbake dt-utils
-      #- name: Build casync, casync-native
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake-layers add-layer ../meta-openembedded/meta-oe
-      #    bitbake-layers add-layer ../meta-openembedded/meta-python
-      #    bitbake-layers add-layer ../meta-openembedded/meta-networking
-      #    bitbake-layers add-layer ../meta-openembedded/meta-filesystems
-      #    bitbake casync casync-native
-      #- name: Build rauc-hawkbit
-      #  run: |
-      #    source poky/oe-init-build-env build
-      #    bitbake-layers add-layer ../meta-openembedded/meta-python
-      #    bitbake rauc-hawkbit
+      - name: Build casync, casync-native
+        run: |
+          source poky/oe-init-build-env build
+          bitbake-layers add-layer ../meta-openembedded/meta-oe
+          bitbake-layers add-layer ../meta-openembedded/meta-python
+          bitbake-layers add-layer ../meta-openembedded/meta-networking
+          bitbake-layers add-layer ../meta-openembedded/meta-filesystems
+          bitbake casync casync-native
+      - name: Build rauc-hawkbit
+        run: |
+          source poky/oe-init-build-env build
+          bitbake-layers add-layer ../meta-openembedded/meta-python
+          bitbake rauc-hawkbit
       - name: Cache Data
         env:
           CACHE_KEY: ${{ secrets.YOCTO_CACHE_KEY }}
