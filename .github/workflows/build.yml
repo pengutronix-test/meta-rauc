@@ -1,0 +1,65 @@
+name: build
+
+on:
+  push: {}
+  pull_request: {}
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    name: meta-rauc Build
+    # running without sstate would take too long, so only run on the main repo or if BUILD_RUNS_ON is set
+    if: ${{ vars.BUILD_RUNS_ON || github.repository == 'pengutronix-test/meta-rauc' }}
+    runs-on: ${{ fromJSON(vars.BUILD_RUNS_ON || (github.repository == 'pengutronix-test/meta-rauc' && '["self-hosted", "forrest", "build"]'))}}
+    timeout-minutes: 720
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: meta-rauc
+      - name: Clone poky
+        run: git clone --shared --reference-if-able /srv/shared-git/poky.git -b master https://github.com/yoctoproject/poky.git
+      - name: Clone meta-openembedded
+        run: git clone --shared --reference-if-able /srv/shared-git/meta-openembedded.git -b master https://github.com/openembedded/meta-openembedded.git
+      - name: Initialize build directory
+        run: |
+          source poky/oe-init-build-env build
+          bitbake-layers add-layer ../meta-rauc
+          cp ~/.yocto/auto.conf conf/ || true
+          echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
+          echo 'BB_GENERATE_MIRROR_TARBALLS = "1"' >> conf/local.conf
+      #- name: Build rauc, rauc-native
+      #  run: |
+      #    source poky/oe-init-build-env build
+      #    bitbake rauc rauc-native
+      #- name: Build rauc-hawkbit-updater
+      #  run: |
+      #    source poky/oe-init-build-env build
+      #    bitbake rauc-hawkbit-updater
+      - name: Build dt-utils
+        run: |
+          source poky/oe-init-build-env build
+          bitbake dt-utils
+      #- name: Build casync, casync-native
+      #  run: |
+      #    source poky/oe-init-build-env build
+      #    bitbake-layers add-layer ../meta-openembedded/meta-oe
+      #    bitbake-layers add-layer ../meta-openembedded/meta-python
+      #    bitbake-layers add-layer ../meta-openembedded/meta-networking
+      #    bitbake-layers add-layer ../meta-openembedded/meta-filesystems
+      #    bitbake casync casync-native
+      #- name: Build rauc-hawkbit
+      #  run: |
+      #    source poky/oe-init-build-env build
+      #    bitbake-layers add-layer ../meta-openembedded/meta-python
+      #    bitbake rauc-hawkbit
+      - name: Cache Data
+        env:
+          CACHE_KEY: ${{ secrets.YOCTO_CACHE_KEY }}
+        if: ${{ always() && env.CACHE_KEY }}
+        run: |
+          echo "$CACHE_KEY" >> ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          rsync -rvx --ignore-existing build/downloads yocto-cache: || true
+          rsync -rvx --ignore-existing build/sstate-cache yocto-cache: || true
+
