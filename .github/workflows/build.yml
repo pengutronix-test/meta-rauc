@@ -9,10 +9,18 @@ jobs:
   build:
     name: meta-rauc Build
     #runs-on: ${{ fromJSON(vars.BUILD_RUNS_ON || (github.repository == 'pengutronix-test/meta-rauc' && '["self-hosted", "forrest", "build"]') || 'ubuntu-22.04') }}
-    runs-on: ${{ (vars.BUILD_RUNS_ON != ''  && fromJSON(vars.BUILD_RUNS_ON)) || 'ubuntu-22.04' }}
+    runs-on: >-
+      ${{
+        (vars.BUILD_RUNS_ON != ''  && fromJSON(vars.BUILD_RUNS_ON)) ||
+        (github.repository == 'pengutronix-test/meta-rauc' && fromJSON('["self-hosted", "forrest", "build"]')) ||
+        'ubuntu-20.04'
+      }}
     # abort if it seems that we're rebuilding too much
     timeout-minutes: 120
     steps:
+      - name: Install required packages
+        run: |
+          sudo apt-get -q -y --no-install-recommends install diffstat
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -28,7 +36,7 @@ jobs:
           cp ~/.yocto/auto.conf conf/ || true
           echo 'BB_SIGNATURE_HANDLER = "OEBasicHash"' >> conf/local.conf
           echo 'BB_HASHSERVE = ""' >> conf/local.conf
-          echo 'OPKGBUILDCMD = \'opkg-build -Z gzip -a "-1n"\' >> conf/local.conf
+          echo 'OPKGBUILDCMD = "opkg-build -Z gzip -a -1n"' >> conf/local.conf
           echo 'DISTRO_FEATURES:remove = "alsa bluetooth usbgadget usbhost wifi nfs zeroconf pci 3g nfc x11 opengl ptest wayland vulkan"' >> conf/local.conf
           echo 'SSTATE_MIRRORS = "file://.* https://github-runner.pengutronix.de/sstate-cache/PATH"' >> conf/local.conf
       #- name: Build rauc, rauc-native
@@ -59,10 +67,10 @@ jobs:
       - name: Cache Data
         env:
           CACHE_KEY: ${{ secrets.YOCTO_CACHE_KEY }}
-        if: ${{ always() && env.CACHE_KEY }}
+        if: ${{ env.CACHE_KEY }}
         run: |
+          mkdir ~/.ssh
           echo "$CACHE_KEY" >> ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           rsync -rvx --ignore-existing build/downloads yocto-cache: || true
           rsync -rvx --ignore-existing build/sstate-cache yocto-cache: || true
-
